@@ -37,7 +37,7 @@ const StackedBarTrack = (HGC, ...args) => {
       this.maxAndMin.max = this.scale.maxValue;
       this.maxAndMin.min = this.scale.minValue;
 
-      // console.log('initTile:', tile.tileId, this.maxAndMin);
+      console.log('initTile:', tile.tileId, this.maxAndMin);
       // tile.minValue = this.scale.minValue;
 
       this.localColorToHexScale();
