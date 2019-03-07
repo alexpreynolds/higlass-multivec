@@ -1,6 +1,6 @@
 import {scaleLinear, scaleOrdinal, schemeCategory10} from 'd3-scale';
 
-const StackedBarTrack = (HGC, ...args) => {
+const StackedCategoricalBarTrack = (HGC, ...args) => {
   if (!new.target) {
     throw new Error(
       'Uncaught TypeError: Class constructor cannot be invoked without "new"',
@@ -13,7 +13,7 @@ const StackedBarTrack = (HGC, ...args) => {
   // Utils
   const { colorToHex } = HGC.utils;
 
-  class StackedBarTrackClass extends HGC.tracks.BarTrack {
+  class StackedCategoricalBarTrackClass extends HGC.tracks.BarTrack {
     constructor(context, options) {
       super(context, options);
 
@@ -87,19 +87,17 @@ const StackedBarTrack = (HGC, ...args) => {
       tile.drawnAtScale = this._xScale.copy();
 
       // we're setting the start of the tile to the current zoom level
-      const {tileX, tileWidth} = this.getTilePosAndDimensions(tile.tileData.zoomLevel,
-        tile.tileData.tilePos, this.tilesetInfo.tile_size);
+      const {tileX, tileWidth} = this.getTilePosAndDimensions(tile.tileData.zoomLevel, tile.tileData.tilePos, this.tilesetInfo.tile_size);
 
       const matrix = this.unFlatten(tile);
 
       this.oldDimensions = this.dimensions; // for mouseover
 
       // creates a sprite containing all of the rectangles in this tile
-      this.drawVerticalBars(this.mapOriginalColors(matrix), tileX, tileWidth,
-        this.maxAndMin.max, this.maxAndMin.min, tile);
+      this.drawVerticalBars(this.mapOriginalColors(matrix), tileX, tileWidth, this.maxAndMin.max, this.maxAndMin.min, tile);
 
       // console.log('tile.sprite', tile.sprite.x, tile.sprite.y, tile.sprite.scale.x, tile.sprite.scale.y)
-      // console.log('this.maxAndMin', this.maxAndMin);
+      //console.log('this.maxAndMin', this.maxAndMin);
 
       graphics.addChild(tile.sprite);
       this.makeMouseOverData(tile);
@@ -181,25 +179,12 @@ const StackedBarTrack = (HGC, ...args) => {
 
       for (let i = 0; i < matrix.length; i++) {
         const temp = matrix[i];
-
-        // find total heights of each positive column and each negative column
-        // and compare to highest value so far for the tile
-        const localPositiveMax = temp.filter(a => a >= 0).reduce((a, b) => a + b, 0);
+        const localPositiveMax = temp.length;
         if (localPositiveMax > maxAndMin.max) {
           maxAndMin.max = localPositiveMax;
         }
-
-        let negativeValues = temp.filter(a => a < 0);
-        // console.log('negativeValues:', negativeValues);
-
-        if (negativeValues.length > 0) {
-          negativeValues = negativeValues.map(a => Math.abs(a));
-          const localNegativeMax = negativeValues.reduce((a, b) => a + b, 0); // check
-          if (maxAndMin.min === null || localNegativeMax > maxAndMin.min) {
-            maxAndMin.min = localNegativeMax;
-          }
-        }
       }
+      maxAndMin.min = 0;
 
       return maxAndMin;
     }
@@ -227,7 +212,7 @@ const StackedBarTrack = (HGC, ...args) => {
         const matrix = this.simpleUnFlatten(tile, flattenedArray);
 
         const maxAndMin = this.findMaxAndMin(matrix);
-        // console.log('unflatten', tile.tileId, maxAndMin.min, maxAndMin.max);
+        //console.log('unflatten', tile.tileId, maxAndMin.min, maxAndMin.max);
 
         tile.matrix = matrix;
         tile.maxValue = maxAndMin.max;
@@ -269,8 +254,7 @@ const StackedBarTrack = (HGC, ...args) => {
 
 
     /**
-     * Map each value in every array in the matrix to a color depending on position in the array
-     * Divides each array into positive and negative sections and sorts them
+     * Map each value in every array in the matrix to a color depending on categorical value stored in the array
      *
      * @param matrix 2d array of numbers representing nucleotides
      * @return
@@ -282,36 +266,21 @@ const StackedBarTrack = (HGC, ...args) => {
       const matrixWithColors = [];
       for (let j = 0; j < matrix.length; j++) {
         const columnColors = [];
-
         for (let i = 0; i < matrix[j].length; i++) {
           columnColors[i] = {
             value: isNaN(matrix[j][i]) ? 0 : matrix[j][i],
-            color: colorScale[i]
+            color: isNaN(matrix[j][i]) ? 0 : colorScale[matrix[j][i] - 1]
           }
         }
-
-        // separate positive and negative array values
-        const positive = [];
-        const negative = [];
+        const values = [];
         for (let i = 0; i < columnColors.length; i++) {
           if (columnColors[i].value >= 0) {
-            positive.push(columnColors[i]);
-          }
-          else if (columnColors[i].value < 0) {
-            negative.push(columnColors[i]);
+            values.push(columnColors[i]);
           }
         }
-        if (this.options.sortLargestOnTop) {
-          positive.sort((a, b) => a.value - b.value);
-          negative.sort((a, b) => b.value - a.value);
-        }
-        else {
-          positive.sort((a, b) => b.value - a.value);
-          negative.sort((a, b) => a.value - b.value);
-        }
-
-        matrixWithColors.push([positive, negative]);
+        matrixWithColors.push([values]);
       }
+      
       return matrixWithColors;
     }
 
@@ -329,16 +298,13 @@ const StackedBarTrack = (HGC, ...args) => {
     drawVerticalBars(matrix, tileX, tileWidth, positiveMax, negativeMax, tile) {
       let graphics = new PIXI.Graphics();
       const trackHeight = this.dimensions[1];
-      // console.log('drawing vertical:', trackHeight, positiveMax, negativeMax);
+      //console.log('drawing vertical:', trackHeight, positiveMax, negativeMax);
 
       // get amount of trackHeight reserved for positive and for negative
       const unscaledHeight = positiveMax + (Math.abs(negativeMax));
 
-      // fraction of the track devoted to positive values
+      // fraction of the track devoted to values
       const positiveTrackHeight = (positiveMax * trackHeight) / unscaledHeight;
-
-      // fraction of the track devoted to negative values
-      const negativeTrackHeight = (Math.abs(negativeMax) * trackHeight) / unscaledHeight;
 
       //console.log('positiveTrackHeight', tile.tileId, positiveTrackHeight);
 
@@ -359,14 +325,16 @@ const StackedBarTrack = (HGC, ...args) => {
         const x = (j * width);
         (j === 0) ? start = x : start;
 
-        // draw positive values
+        // draw values with a constant height
+        const constantHeight = 1;
         const positive = matrix[j][0];
         const valueToPixelsPositive = scaleLinear()
           .domain([0, positiveMax])
           .range([0, positiveTrackHeight]);
         let positiveStackedHeight = 0;
         for (let i = 0; i < positive.length; i++) {
-          const height = valueToPixelsPositive(positive[i].value);
+          //const height = valueToPixelsPositive(positive[i].value);
+          const height = valueToPixelsPositive(constantHeight);
           const y = positiveTrackHeight - (positiveStackedHeight + height);
           this.addSVGInfo(tile, x, y, width, height, positive[i].color);
           graphics.beginFill(this.colorHexMap[positive[i].color]);
@@ -374,21 +342,6 @@ const StackedBarTrack = (HGC, ...args) => {
           positiveStackedHeight = positiveStackedHeight + height;
           if (lowestY > y)
             lowestY = y;
-        }
-
-        // draw negative values
-        const negative = matrix[j][1];
-        const valueToPixelsNegative = scaleLinear()
-          .domain([-Math.abs(negativeMax), 0])
-          .range([negativeTrackHeight, 0]);
-        let negativeStackedHeight = 0;
-        for (let i = 0; i < negative.length; i++) {
-          const height = valueToPixelsNegative(negative[i].value);
-          const y = positiveTrackHeight + negativeStackedHeight;
-          this.addSVGInfo(tile, x, y, width, height, negative[i].color);
-          graphics.beginFill(this.colorHexMap[negative[i].color]);
-          graphics.drawRect(x, y, width, height);
-          negativeStackedHeight = negativeStackedHeight + height;
         }
       }
 
@@ -628,7 +581,7 @@ const StackedBarTrack = (HGC, ...args) => {
           if (dataY > y && dataY <= (y + height)) {
             const color = row[i].color;
             const value = Number.parseFloat(matrixRow[colorScaleMap[color]]).toPrecision(4).toString();
-            const type = this.tilesetInfo.row_infos[colorScaleMap[color]];
+            const type = (this.tilesetInfo.row_infos) ? this.tilesetInfo.row_infos[colorScaleMap[color]] : "NA";
 
             return `<svg width="10" height="10"><rect width="10" height="10" rx="2" ry="2"
             style="fill:${color};stroke:black;stroke-width:2;"></svg>`
@@ -645,32 +598,31 @@ const StackedBarTrack = (HGC, ...args) => {
     }
 
   }
-  return new StackedBarTrackClass(...args);
+  return new StackedCategoricalBarTrackClass(...args);
 };
 
-const icon = '<svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="564px" height="542px" viewBox="0 0 5640 5420" preserveAspectRatio="xMidYMid meet"> <g id="layer101" fill="#000000" stroke="none"> <path d="M0 2710 l0 -2710 2820 0 2820 0 0 2710 0 2710 -2820 0 -2820 0 0 -2710z"/> </g> <g id="layer102" fill="#750075" stroke="none"> <path d="M200 4480 l0 -740 630 0 630 0 0 740 0 740 -630 0 -630 0 0 -740z"/> <path d="M1660 4420 l0 -800 570 0 570 0 0 800 0 800 -570 0 -570 0 0 -800z"/> <path d="M3000 3450 l0 -1770 570 0 570 0 0 1770 0 1770 -570 0 -570 0 0 -1770z"/> <path d="M4340 2710 l0 -2510 560 0 560 0 0 2510 0 2510 -560 0 -560 0 0 -2510z"/> <path d="M200 1870 l0 -1670 630 0 630 0 0 1670 0 1670 -630 0 -630 0 0 -1670z"/> <path d="M1660 1810 l0 -1610 570 0 570 0 0 1610 0 1610 -570 0 -570 0 0 -1610z"/> <path d="M3000 840 l0 -640 570 0 570 0 0 640 0 640 -570 0 -570 0 0 -640z"/> </g> <g id="layer103" fill="#ffff04" stroke="none"> <path d="M200 4480 l0 -740 630 0 630 0 0 740 0 740 -630 0 -630 0 0 -740z"/> <path d="M1660 4420 l0 -800 570 0 570 0 0 800 0 800 -570 0 -570 0 0 -800z"/> <path d="M3000 3450 l0 -1770 570 0 570 0 0 1770 0 1770 -570 0 -570 0 0 -1770z"/> </g> </svg>';
+const icon = '<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 564 542"><defs><style>.cls-1{fill:#006400;}.cls-2{fill:green;}.cls-3{fill:#32cd32;}.cls-4{fill:red;}.cls-5{fill:#c2e105;}.cls-6{fill:#66cdaa;}.cls-7{fill:#ff4500;}</style></defs><title>icon</title><path d="M0,271V0H564V542H0Z"/><path class="cls-1" d="M429.57,75.08V18.44h115V131.72h-115Z"/><path class="cls-1" d="M294.07,75.08V18.44h115V131.72h-115Z"/><path class="cls-1" d="M157.59,76V19.38h117V132.66h-117Z"/><path class="cls-1" d="M20.83,76.29V19.65H138.39V132.93H20.83Z"/><path class="cls-2" d="M429.35,203.89V147.25h115V260.53h-115Z"/><path class="cls-3" d="M293.85,203.89V147.25h115V260.53h-115Z"/><path class="cls-4" d="M20.61,205.1V148.46H138.17V261.74H20.61Z"/><path class="cls-2" d="M429.35,333.92V277.28h115V390.55h-115Z"/><path class="cls-3" d="M293.85,333.92V277.28h115V390.55h-115Z"/><path class="cls-5" d="M429.35,465.4V408.76h115V522h-115Z"/><path class="cls-5" d="M293.85,465.4V408.76h115V522h-115Z"/><path class="cls-6" d="M157.38,466.34V409.7h117V523h-117Z"/><path class="cls-6" d="M20.61,466.36V409.72H138.17V523H20.61Z"/><path class="cls-7" d="M157.32,205.1V148.46H274.88V261.74H157.32Z"/><path class="cls-7" d="M157.32,335.13V278.49H274.88V391.76H157.32Z"/><path class="cls-4" d="M20.83,335.73V279.09H138.39V392.37H20.83Z"/></svg>';
 
 // default
-StackedBarTrack.config = {
-  type: 'horizontal-stacked-bar',
-  datatype: ['multivec', 'epilogos'],
+StackedCategoricalBarTrack.config = {
+  type: 'horizontal-categorical-stacked-bar',
+  datatype: ['multivec'],
   local: false,
   orientation: '1d-horizontal',
   thumbnail: new DOMParser().parseFromString(icon, 'text/xml').documentElement,
   availableOptions: ['labelPosition', 'labelColor', 'valueScaling',
     'labelTextOpacity', 'labelBackgroundOpacity', 'trackBorderWidth',
     'trackBorderColor', 'trackType', 'scaledHeight', 'backgroundColor',
-    'colorScale', 'barBorder', 'sortLargestOnTop'],
+    'colorScale', 'barBorder'],
   defaultOptions: {
-    labelPosition: 'topLeft',
+    labelPosition: 'hidden',
     labelColor: 'black',
     labelTextOpacity: 0.4,
     valueScaling: 'linear',
     trackBorderWidth: 0,
     trackBorderColor: 'black',
-    backgroundColor: 'white',
-    barBorder: true,
-    sortLargestOnTop: true,
+    backgroundColor: 'black',
+    barBorder: false,
     colorScale: [
       "#FF0000",
       "#FF4500",
@@ -690,11 +642,8 @@ StackedBarTrack.config = {
     ],
   },
   otherOptions: {
-    'epilogos': {
-      scaledHeight: false,
-    }
   }
 };
 
 
-export default StackedBarTrack;
+export default StackedCategoricalBarTrack;
