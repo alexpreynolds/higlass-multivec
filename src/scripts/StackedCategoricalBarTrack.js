@@ -9,6 +9,8 @@ const StackedCategoricalBarTrack = (HGC, ...args) => {
 
   // Services
   const { tileProxy } = HGC.services;
+  
+  //console.log("tileProxy", tileProxy);
 
   // Utils
   const { colorToHex } = HGC.utils;
@@ -335,7 +337,9 @@ const StackedCategoricalBarTrack = (HGC, ...args) => {
         for (let i = 0; i < positive.length; i++) {
           //const height = valueToPixelsPositive(positive[i].value);
           const height = valueToPixelsPositive(constantHeight);
-          const y = positiveTrackHeight - (positiveStackedHeight + height);
+          //const y = positiveTrackHeight - (positiveStackedHeight + height);
+          // reverse the vertical order of cells
+          const y = positiveStackedHeight - positiveTrackHeight;
           this.addSVGInfo(tile, x, y, width, height, positive[i].color);
           graphics.beginFill(this.colorHexMap[positive[i].color]);
           graphics.drawRect(x, y, width, height);
@@ -580,12 +584,21 @@ const StackedCategoricalBarTrack = (HGC, ...args) => {
           const height = row[i].height;
           if (dataY > y && dataY <= (y + height)) {
             const color = row[i].color;
-            const value = Number.parseFloat(matrixRow[colorScaleMap[color]]).toPrecision(4).toString();
-            const type = (this.tilesetInfo.row_infos) ? this.tilesetInfo.row_infos[colorScaleMap[color]] : "NA";
+            //const value = Number.parseFloat(matrixRow[colorScaleMap[color]]).toPrecision(4).toString();
+            //const md = (this.tilesetInfo.row_infos) ? JSON.parse(this.tilesetInfo.row_infos[i]) : "NA";
+            //const label = md.name + ' | ' + md.description;
+            //console.log("color, colorScaleMap[color]", color, colorScaleMap[color]);
+            const label = (this.tilesetInfo.row_infos) ? this.tilesetInfo.row_infos[i] : "NA";
+            console.log("this.tilesetInfo", this.tilesetInfo);
+            //const category = (this.tilesetInfo.category_infos) ? this.tilesetInfo.category_infos[colorScaleMap[color]] : "NA";
 
+            //return `<svg width="10" height="10"><rect width="10" height="10" rx="2" ry="2"
+            //style="fill:${color};stroke:black;stroke-width:2;"></svg>`
+            //  + ` ${label}` + `<br>` + `${category}`;
+            
             return `<svg width="10" height="10"><rect width="10" height="10" rx="2" ry="2"
             style="fill:${color};stroke:black;stroke-width:2;"></svg>`
-              + ` ${type}` + `<br>` + `${value}`;
+              + ` ${label}`;
 
           }
         }
