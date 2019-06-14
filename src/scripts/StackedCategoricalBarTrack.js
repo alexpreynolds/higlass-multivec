@@ -589,7 +589,7 @@ const StackedCategoricalBarTrack = (HGC, ...args) => {
             //const label = md.name + ' | ' + md.description;
             //console.log("color, colorScaleMap[color]", color, colorScaleMap[color]);
             const label = (this.tilesetInfo.row_infos) ? this.tilesetInfo.row_infos[i] : "NA";
-            console.log("this.tilesetInfo", this.tilesetInfo);
+            //console.log("this.tilesetInfo", this.tilesetInfo);
             //const category = (this.tilesetInfo.category_infos) ? this.tilesetInfo.category_infos[colorScaleMap[color]] : "NA";
 
             //return `<svg width="10" height="10"><rect width="10" height="10" rx="2" ry="2"

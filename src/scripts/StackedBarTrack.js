@@ -16,16 +16,43 @@ const StackedBarTrack = (HGC, ...args) => {
   class StackedBarTrackClass extends HGC.tracks.BarTrack {
     constructor(context, options) {
       super(context, options);
-
+      
+      //console.log("HGC", HGC);
 
       this.maxAndMin = {
         max: null,
         min: null
       };
+      
+      this.customMaxAndMin = {
+        max: null,
+        min: null
+      };
+      
+      window.addEventListener("pairedMinMax", (e) => {
+        if (this.options.customRange) {
+          this.customMaxAndMin.min = e.detail.globalMin;
+          this.customMaxAndMin.max = e.detail.globalMax;
+          this.rescaleTiles();
+        }
+      });
 
+      window.addEventListener("testMaxAndMin", (e) => { 
+        console.log("test min", e.detail.testCustomMin);
+        console.log("test max", e.detail.testCustomMax);
+        if (this.customMaxAndMin.max < e.detail.testCustomMax) {
+          this.customMaxAndMin.max = e.detail.testCustomMax;
+        }
+        if (this.customMaxAndMin.min > e.detail.testCustomMin) {
+          this.customMaxAndMin.min = e.detail.testCustomMin;
+        }
+        console.log("custom min/max", this.customMaxAndMin);
+        this.rescaleTiles();
+      });
     }
 
     initTile(tile) {
+      console.log("initTile", tile.tileData.tilesetUid);
       // create the tile
       // should be overwritten by child classes
       this.scale.minRawValue = this.minVisibleValue();
@@ -33,6 +60,9 @@ const StackedBarTrack = (HGC, ...args) => {
 
       this.scale.minValue = this.scale.minRawValue;
       this.scale.maxValue = this.scale.maxRawValue;
+
+      //if (this.options.customMin) console.log("this.options.customMin", this.options.customMin);
+      //if (this.options.customMax) console.log("this.options.customMax", this.options.customMax);
 
       this.maxAndMin.max = this.scale.maxValue;
       this.maxAndMin.min = this.scale.minValue;
@@ -43,13 +73,25 @@ const StackedBarTrack = (HGC, ...args) => {
       this.localColorToHexScale();
 
       this.unFlatten(tile);
-
+      
+      if (this.options.customRange) {
+        let testMaxAndMinEvent = new CustomEvent("testMaxAndMin", { detail: { 
+          testCustomMin: this.maxAndMin.min,
+          testCustomMax: this.maxAndMin.max,
+        } });
+        //this.customMaxAndMin = { max: -1000, min: 1000 };
+        window.dispatchEvent(testMaxAndMinEvent);
+        console.log('dispatching...', testMaxAndMinEvent);
+      }
+      
       this.renderTile(tile);
+      
       this.rescaleTiles();
     }
 
 
     rerender(newOptions) {
+      //console.log('rerender()');
       super.rerender(newOptions);
 
       this.options = newOptions;
@@ -78,6 +120,7 @@ const StackedBarTrack = (HGC, ...args) => {
      * @param tile
      */
     renderTile(tile) {
+      //console.log('renderTile()');
       tile.svgData = null;
       tile.mouseOverData = null;
 
@@ -107,9 +150,11 @@ const StackedBarTrack = (HGC, ...args) => {
 
     syncMaxAndMin() {
       const visibleAndFetched = this.visibleAndFetchedTiles();
+      
+      //console.log("syncMaxAndMin()");
 
       visibleAndFetched.map(tile => {
-        // console.log('tile:', tile.tileId, tile.minValue, tile.maxValue);
+        console.log('tile:', tile, tile.minValue, tile.maxValue);
 
         if (tile.minValue + tile.maxValue > this.maxAndMin.min + this.maxAndMin.max) {
           this.maxAndMin.min = tile.minValue;
@@ -122,20 +167,60 @@ const StackedBarTrack = (HGC, ...args) => {
           // if (!(this.maxAndMin && this.maxAndMin.max && this.maxAndMin.max > tile.maxValue)) {
           //   this.maxAndMin.max = tile.maxValue;
           // }
-        // console.log('this.maxAndMin:', this.maxAndMin);
+        //console.log('this.maxAndMin:', this.maxAndMin);
       });
+
     }
 
     /**
      * Rescales the sprites of all visible tiles when zooming and panning.
      */
     rescaleTiles() {
-      // console.log('rescale:')
+      console.log('rescaleTiles()');
       const visibleAndFetched = this.visibleAndFetchedTiles();
-
+      
       this.syncMaxAndMin();
+      
+      if (this.options.customRange === true) {
+        
+        console.log('maxAndMin:', this.maxAndMin);
+        if (this.customMaxAndMin) {
+          if (this.customMaxAndMin.min) { 
+            //this.maxAndMin.min = (this.customMaxAndMin.min < this.maxAndMin.min) ? this.customMaxAndMin.min : this.maxAndMin.min; 
+            this.maxAndMin.min = this.customMaxAndMin.min;
+          }
+          if (this.customMaxAndMin.max) { 
+            //this.maxAndMin.max = (this.customMaxAndMin.max > this.maxAndMin.max) ? this.customMaxAndMin.max : this.maxAndMin.max;
+            this.maxAndMin.max = this.customMaxAndMin.max;
+          }
+        }
+        console.log('(new) maxAndMin:', this.maxAndMin);
 
-      // console.log('maxAndMin:', this.maxAndMin);
+        //console.log("unscaled maxAndMin", this.maxAndMin);
+        //const [vs, offsetValue] = this.makeValueScale(
+        //  this.maxAndMin.min,
+        //  0,
+        //  this.maxAndMin.max
+        //);
+        //this.valueScale = vs;
+        //console.log("offsetValue", offsetValue);
+        //let rescaledMaxAndMin = {max: this.valueScale(this.maxAndMin.max), min: this.valueScale(this.maxAndMin.min)};
+        //console.log("RE-scaled maxAndMin", rescaledMaxAndMin);
+      }
+      else if (this.options.customRange === false) {
+        let absMax = Math.max(Math.abs(this.maxAndMin.min), this.maxAndMin.max);
+        let slop = 0.01 * absMax;
+        absMax += slop;
+        this.maxAndMin.min = -absMax;
+        this.maxAndMin.max = absMax;
+      }
+      
+      const [vs, offsetValue] = this.makeValueScale(
+        this.maxAndMin.max,
+        0,
+        -this.maxAndMin.min
+      );
+      this.valueScale = vs;
 
       visibleAndFetched.map(a => {
         const valueToPixels = scaleLinear()
@@ -212,6 +297,9 @@ const StackedBarTrack = (HGC, ...args) => {
        * @returns {Array} 2d array of numerical values for each column
        */
       unFlatten(tile) {
+        
+        //console.log("unFlatten(tile)");
+        
         if (tile.matrix) {
           return tile.matrix;
         }
@@ -227,7 +315,8 @@ const StackedBarTrack = (HGC, ...args) => {
         const matrix = this.simpleUnFlatten(tile, flattenedArray);
 
         const maxAndMin = this.findMaxAndMin(matrix);
-        // console.log('unflatten', tile.tileId, maxAndMin.min, maxAndMin.max);
+        
+        //console.log('unflatten', tile.tileId, maxAndMin.min, maxAndMin.max);
 
         tile.matrix = matrix;
         tile.maxValue = maxAndMin.max;
@@ -245,6 +334,9 @@ const StackedBarTrack = (HGC, ...args) => {
        * @returns {Array} 2D array representation of data
        */
       simpleUnFlatten(tile, data) {
+        
+        console.log("simpleUnFlatten(tile)");
+        
         const shapeX = tile.tileData.shape[0]; // number of different nucleotides in each bar
         const shapeY = tile.tileData.shape[1]; // number of bars
 
@@ -276,6 +368,9 @@ const StackedBarTrack = (HGC, ...args) => {
      * @return
      */
     mapOriginalColors(matrix) {
+      
+      console.log("mapOriginalColors(matrix)");
+      
       const colorScale = this.options.colorScale || scaleOrdinal(schemeCategory10);
 
       // mapping colors to unsorted values
@@ -339,8 +434,15 @@ const StackedBarTrack = (HGC, ...args) => {
 
       // fraction of the track devoted to negative values
       const negativeTrackHeight = (Math.abs(negativeMax) * trackHeight) / unscaledHeight;
+      
+      const [vs, offsetValue] = this.makeValueScale(
+        positiveMax,
+        this.medianVisibleValue,
+        negativeMax
+      );
+      this.valueScale = vs;
 
-      //console.log('positiveTrackHeight', tile.tileId, positiveTrackHeight);
+      //console.log('positiveTrackHeight', tile.tileId, positiveTrackHeight, this.valueScale(6.4676513671875), this.valueScale(0.36053466796875));
 
       let start = null;
       let lowestY = this.dimensions[1];
@@ -367,6 +469,7 @@ const StackedBarTrack = (HGC, ...args) => {
         let positiveStackedHeight = 0;
         for (let i = 0; i < positive.length; i++) {
           const height = valueToPixelsPositive(positive[i].value);
+          //console.log("i, value, height, valueScaled", i, positive[i].value, height, this.valueScale(positive[i].value));
           const y = positiveTrackHeight - (positiveStackedHeight + height);
           this.addSVGInfo(tile, x, y, width, height, positive[i].color);
           graphics.beginFill(this.colorHexMap[positive[i].color]);
