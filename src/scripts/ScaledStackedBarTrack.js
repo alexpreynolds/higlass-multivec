@@ -19,7 +19,6 @@ const ScaledStackedBarTrack = (HGC, ...args) => {
         max: null,
         min: null
       };
-
     }
 
     /**

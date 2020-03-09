@@ -136,6 +136,18 @@ const StackedBarTrack = (HGC, ...args) => {
       this.syncMaxAndMin();
 
       // console.log('maxAndMin:', this.maxAndMin);
+      
+      /**
+       * If the symmetricRange option is specified and is true, then a horizontally-oriented bar 
+       * chart is centered vertically (and a vertically-oriented bar chart is centered horizontally)
+       */
+      if (this.options.symmetricRange === true) {
+        let absMax = Math.max(Math.abs(this.maxAndMin.min), this.maxAndMin.max);
+        let slop = 0.01 * absMax;
+        absMax += slop;
+        this.maxAndMin.min = -absMax;
+        this.maxAndMin.max = absMax;
+      }
 
       visibleAndFetched.map(a => {
         const valueToPixels = scaleLinear()
