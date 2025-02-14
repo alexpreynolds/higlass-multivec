@@ -77,7 +77,6 @@ const StackedBarTrack = (HGC, ...args) => {
       this.scale.maxValue = this.scale.maxRawValue;
 
       if (this.options.globalMinMax) {
-        // console.log(`this.options.globalMinMax ${JSON.stringify(this.options.globalMinMax)}`);
         this.maxAndMin.min = this.options.globalMinMax.min;
         this.maxAndMin.max = this.options.globalMinMax.max;
       }
@@ -167,23 +166,6 @@ const StackedBarTrack = (HGC, ...args) => {
 
     }
 
-    // calculateVisibleTiles() {
-    //   if (!this.tilesetInfo) {
-    //     return;
-    //   }
-    //   this.zoomLevel = this.calculateZoomLevel();
-    //   if (this.tilesetInfo.resolutions) {
-    //     const sortedResolutions = this.tilesetInfo.resolutions.map((x) => +x).sort((a, b) => b - a);
-    //     const xTiles2 = tileProxy.calculateTilesFromResolution(sortedResolutions[this.zoomLevel], this._xScale, this.tilesetInfo.min_pos[0], this.tilesetInfo.max_pos[0], this.tilesetInfo.tile_size);
-    //     const tiles2 = xTiles2.map((x) => [this.zoomLevel, x]);
-    //     this.setVisibleTiles(tiles2);
-    //     return;
-    //   }
-    //   const xTiles = api.calculateTiles(this.zoomLevel, this.relevantScale(), this.tilesetInfo.min_pos[0], this.tilesetInfo.max_pos[0], this.tilesetInfo.max_zoom, this.tilesetInfo.max_width);
-    //   const tiles = xTiles.map((x) => [this.zoomLevel, x]);
-    //   this.setVisibleTiles(tiles);
-    // }
-
     /**
      * Draws exactly one tile.
      *
@@ -216,7 +198,6 @@ const StackedBarTrack = (HGC, ...args) => {
             this.maxAndMin.max, 
             this.maxAndMin.min, 
             tile);
-          // console.log(`tile.tileId ${tile.tileId} | tileX ${tileX} tileWidth ${tileWidth} this.maxAndMin ${JSON.stringify(this.maxAndMin)}`);
     
           graphics.addChild(tile.sprite);
           this.makeMouseOverData(tile);
@@ -264,7 +245,6 @@ const StackedBarTrack = (HGC, ...args) => {
           // for initialization. This prevents a flickering that is caused by
           // rendering the track multiple times with possibly different valueScales
           const glge = this.getLockGroupExtrema();
-          // console.log(`[StackedBarTrack] > rescaleTiles: glge ${JSON.stringify(glge)}`);
           if (glge !== null) {
             this.maxAndMin.min = 1.05 * glge[0];
             this.maxAndMin.max = 1.05 * glge[1];
@@ -497,7 +477,6 @@ const StackedBarTrack = (HGC, ...args) => {
     /**
      * Draws graph without normalizing values.
      *
-     * @param graphics PIXI.Graphics instance
      * @param matrix 2d array of numbers representing nucleotides
      * @param tileX starting position of tile
      * @param tileWidth pre-scaled width of tile
@@ -505,132 +484,8 @@ const StackedBarTrack = (HGC, ...args) => {
      * @param negativeMax the height of the tallest bar in the negative part of the graph
      * @param tile
      */
-    // drawVerticalBars(matrix, tileX, tileWidth, positiveMax, negativeMax, tile) {
-    //   this.textureGraphics.clear();
-    //   const trackHeight = this.dimensions[1];
-
-    //   // get amount of trackHeight reserved for positive and for negative
-    //   const unscaledHeight = positiveMax + (Math.abs(negativeMax));
-
-    //   // fraction of the track devoted to positive values
-    //   const positiveTrackHeight = (positiveMax * trackHeight) / unscaledHeight;
-
-    //   // fraction of the track devoted to negative values
-    //   const negativeTrackHeight = (Math.abs(negativeMax) * trackHeight) / unscaledHeight;
-
-    //   let start = null;
-    //   let lowestY = this.dimensions[1];
-
-    //   const width = 10;
-    //   const spriteGraphics = new HGC.libraries.PIXI.Graphics();
-
-    //   // calls drawBackground in PixiTrack.js
-    //   this.drawBackground(matrix, this.textureGraphics);
-    //   const totalSpriteWidth = this._xScale(tileX + tileWidth) - this._xScale(tileX);
-
-    //   // borders around each bar
-    //   if (this.options.barBorder) {
-    //     this.textureGraphics.lineStyle(1, 0x000000, 1);
-    //   }
-
-    //   const spritesHeights = [];
-
-    //   function addNewSprite(j) {
-    //     // We're going to use this function to break up the tile graphics into
-    //     // sprites of size 256. We do this because textures larger than 256 seem
-    //     // to cause loading problems in Chrome and Firefox
-    //     const spriteWidth = (256  / matrix.length) * totalSpriteWidth;
-
-    //     const texture = pixiRenderer.generateTexture(
-    //       this.textureGraphics, HGC.libraries.PIXI.SCALE_MODES.NEAREST
-    //     );
-        
-    //     const sprite = new HGC.libraries.PIXI.Sprite(texture);
-    //     sprite.width = spriteWidth;
-    //     sprite.x = ((j-256) / matrix.length) * totalSpriteWidth;
-    //     spriteGraphics.addChild(sprite);
-
-    //     spritesHeights.push({
-    //       "sprite": sprite,
-    //       "height": texture.height
-    //     })
-
-    //     this.textureGraphics.clear()
-    //     this.drawBackground(matrix, this.textureGraphics);
-    //   }
-
-    //   for (let j = 0; j < matrix.length; j++) { // jth vertical bar in the graph
-    //     const x = (j * width);
-    //     (j === 0) ? start = x : start;
-
-    //     if (j > 0 && j % 256 == 0) {
-    //       // Add a new small sprite
-    //       addNewSprite.bind(this)(j)
-    //     }
-
-    //     // draw positive values
-    //     const positive = matrix[j][0];
-
-    //     const valueToPixelsPositive = scaleLinear()
-    //       .domain([0, positiveMax])
-    //       .range([0, positiveTrackHeight]);
-    //     let positiveStackedHeight = 0;
-
-    //     for (let i = 0; i < positive.length; i++) {
-    //       const height = valueToPixelsPositive(positive[i].value);
-    //       const y = positiveTrackHeight - (positiveStackedHeight + height);
-    //       this.addSVGInfo(tile, x, y, width, height, positive[i].color);
-    //       this.textureGraphics.beginFill(this.colorHexMap[positive[i].color]);
-    //       this.textureGraphics.drawRect(x, y, width, height);
-
-    //       positiveStackedHeight = positiveStackedHeight + height;
-    //       if (lowestY > y)
-    //         lowestY = y;
-    //     }
-
-    //     // draw negative values, if there are any
-
-    //     if(Math.abs(negativeMax)>0){
-    //       const negative = matrix[j][1];
-    //       const valueToPixelsNegative = scaleLinear()
-    //         .domain([-Math.abs(negativeMax), 0])
-    //         .range([negativeTrackHeight, 0]);
-    //       let negativeStackedHeight = 0;
-    //       for (let i = 0; i < negative.length; i++) {
-    //         const height = valueToPixelsNegative(negative[i].value);
-    //         const y = positiveTrackHeight + negativeStackedHeight;
-    //         this.addSVGInfo(tile, x, y, width, height, negative[i].color);
-    //         this.textureGraphics.beginFill(this.colorHexMap[negative[i].color]);
-    //         this.textureGraphics.drawRect(x, y, width, height);
-    //         negativeStackedHeight = negativeStackedHeight + height;
-    //       }
-    //     }
-    //   }
-
-    //   addNewSprite.bind(this)(matrix.length);
-
-    //   // Scale all the "sprites" so that they're aligned along the bottom
-    //   const maxHeight = spritesHeights.reduceRight((pv, spriteHeight) => Math.max(pv, spriteHeight.height), 0);
-    //   for (let i = 0; i < spritesHeights.length; i++) {
-    //     const sprite = spritesHeights[i].sprite;
-    //     sprite.y = maxHeight - spritesHeights[i].height;
-    //   }
-
-    //   // vertical bars are drawn onto the graphics object
-    //   // and a texture is generated from that
-      
-    //   spriteGraphics.width = totalSpriteWidth;
-    //   spriteGraphics.x = this._xScale(tileX);
-
-    //   // From here on out, all of the smaller sprites will be treated
-    //   // as one.
-    //   tile.sprite = spriteGraphics;
-    //   tile.lowestY = lowestY;
-    // }
 
     drawVerticalBars(matrix, tileX, tileWidth, positiveMax, negativeMax, tile) {
-
-      // console.log(`[StackedBarTrack] drawVerticalBars: positiveMax ${JSON.stringify(positiveMax)} | trackHeight ${this.dimensions[1]}`);
 
       let graphics = new HGC.libraries.PIXI.Graphics();
       const trackHeight = this.dimensions[1];
@@ -665,10 +520,6 @@ const StackedBarTrack = (HGC, ...args) => {
         // draw positive values
         const positive = matrix[j][0];
 
-        // if ((j >= 0) && (j <= matrix.length)) {
-        //   console.log(`${j} => positive ${JSON.stringify(positive)}`);
-        // }
-
         const valueToPixelsPositive = scaleLinear()
           .domain([0, positiveMax])
           .range([0, positiveTrackHeight]);
@@ -677,9 +528,6 @@ const StackedBarTrack = (HGC, ...args) => {
         for (let i = 0; i < positive.length; i++) {
           const height = valueToPixelsPositive(positive[i].value);
           const y = positiveTrackHeight - (positiveStackedHeight + height);
-          // if ((j === 54) && (positive[i].value >= 5.5) && (positive[i].value < 6.5)) {
-          //   console.log(`${j}:${i} => positive[i].value ${positive[i].value} | height ${height}`);
-          // }
           this.addSVGInfo(tile, x, y, width, height, positive[i].color);
           graphics.beginFill(this.colorHexMap[positive[i].color]);
           graphics.drawRect(x, y, width, height);
@@ -882,13 +730,9 @@ const StackedBarTrack = (HGC, ...args) => {
         `translate(${this.pMain.position.x},${this.pMain.position.y}) scale(${this.pMain.scale.x},${this.pMain.scale.y})`,
       );
 
-      // this.realignSVG();
-
       for (const tile of this.visibleAndFetchedTiles()) {
         const rotation = 0;
         const g = document.createElement('g');
-
-
 
         // place each sprite
         g.setAttribute(
@@ -958,13 +802,13 @@ const StackedBarTrack = (HGC, ...args) => {
       const dataY = ((trackY - fetchedTile.sprite.y)
         / fetchedTile.sprite.scale.y) + fetchedTile.lowestY;
 
-      //use color to map back to the array index for correct data
+      // use color to map back to the array index for correct data
       const colorScaleMap = {};
       for (let i = 0; i < colorScale.length; i++) {
         colorScaleMap[colorScale[i]] = i;
       }
 
-      // // if mousing over a blank area
+      // if mousing over a blank area
       if (dataY < row[0].y || dataY
         >= (row[row.length - 1].y + row[row.length - 1].height)) {
         return '';

@@ -79,10 +79,7 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
       this.maxAndMin.max = this.maxValueInArray(tile.tileData.dense);
 
       // Number of bars being stacked in each genomic position
-      //this.numCategories = this.options.selectRows ? this.options.selectRows.length : tile.tileData.shape[0];
       this.numCategories = tile.tileData.shape[0];
-
-      // console.log(`StackedDeltaBarChart -> initTile -> this.numCategories ${this.numCategories}`);
 
       this.localColorToHexScale();
 
@@ -119,7 +116,6 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
 
       for (let i = 0; i < visibleAndFetched.length; i++) {
         const tile = visibleAndFetched[i];
-        // console.log(`StackedDeltaBarChart -> updateTile(${tile.tileId})`);
         this.unFlatten(tile);
       }
 
@@ -170,7 +166,7 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
         this.makeMouseOverData(tile);
       }
       catch(err) {
-        console.log(`StackedDeltaBarChart -> renderTile(${tile.tileId}) TypeError`);
+        console.error(`StackedDeltaBarChart -> renderTile(${tile.tileId}) TypeError`);
       }
       
     }
@@ -186,7 +182,6 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
       this.maxAndMin.max = 0;
 
       visibleAndFetched.map(tile => {
-        // console.log(`StackedDeltaBarChart -> syncMaxAndMin(${tile.tileId})`);
         if (tile.minValue + tile.maxValue > this.maxAndMin.min + this.maxAndMin.max) {
           this.maxAndMin.min = tile.minValue;
           this.maxAndMin.max = tile.maxValue;
@@ -523,8 +518,6 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
       let start = null;
       let lowestY = this.dimensions[1];
 
-      // console.log(`StackedDeltaBarChart -> drawVerticalBars(${tile.tileId}) E`);
-
       const width = 10;
 
       // calls drawBackground in PixiTrack.js
@@ -618,7 +611,7 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
         tile.lowestY = lowestY;
       }
       catch(err) {
-        console.log(`StackedDeltaBarChart -> drawVerticalBars(${tile.tileId}) TypeError`);
+        console.error(`StackedDeltaBarChart -> drawVerticalBars(${tile.tileId}) TypeError`);
       }
     }
 
@@ -780,8 +773,6 @@ const StackedDeltaBarTrack = (HGC, ...args) => {
       for (const tile of this.visibleAndFetchedTiles()) {
         const rotation = 0;
         const g = document.createElement('g');
-
-
 
         // place each sprite
         g.setAttribute(

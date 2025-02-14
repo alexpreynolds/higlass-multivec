@@ -156,8 +156,8 @@ const ScaledStackedBarTrack = (HGC, ...args) => {
       // }
 
       for (let j = 0; j < matrix.length; j++) { // jth vertical bar in the graph
-        const x = j;//this._xScale(tileX + (j * tileWidth / this.tilesetInfo.tile_size));
-        const width = 1;//this._xScale(tileX + (tileWidth / this.tilesetInfo.tile_size)) - this._xScale(tileX);
+        const x = j;
+        const width = 1;
         (j === 0) ? start = x : start;
         // positives
         const valueToPixelsPositive = scaleLinear()
